@@ -10,7 +10,7 @@
 | 250051013 | Khairnar Soham Nilesh | Soham-Khairnar | Structure A owner (segment tree) | Q1 |
 | 250008035 | Smita Singh | smitasingh25 | Structure B owner (block decomposition) | Q2 |
 | 250051002 | Abhishek Verma | warrior5301 | Application owner | Q3 |
-| [roll no.] | [name] | [username] | Test owner (also builds worst-case inputs) | Q4 |
+| 250008033 | Shrawan Kumar Prajapati| shrawanprajapati| Test owner (also builds worst-case inputs) | Q4 |
 | [roll no.] | [name] | [username] | Measurement owner | Q5 |
 
 ## Current status
