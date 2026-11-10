@@ -1,0 +1,15 @@
+flowchart TD
+    Header[Read mode and n] --> Check{Valid header and combination?}
+    Check -->|No| Error[Error to stderr and exit 1]
+    Check -->|Yes| Initial[Read exactly n initial readings]
+    Initial --> Backend[Construct selected backend]
+    Backend --> Read{Read next command}
+    Read -->|EOF| Done[Exit 0]
+    Read -->|Blank line| Read
+    Read -->|Command| Validate{Valid syntax, mode and indices?}
+    Validate -->|No| Error
+    Validate -->|Yes| Dispatch[Call matching interface method]
+    Dispatch --> Kind{Query or update?}
+    Kind -->|Update| Read
+    Kind -->|Query| Print[Print one integer and newline]
+    Print --> Read

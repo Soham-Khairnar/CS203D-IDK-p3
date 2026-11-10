@@ -1,0 +1,13 @@
+flowchart TD
+    File[Operation file or standard input] --> Launcher[run.py: optional launcher]
+    Launcher --> Main[main.cpp: choose A or B]
+    Main --> Runner[runner.cpp: validate and replay]
+    Runner --> Factory[makeBackend: choose implementation]
+    Factory --> LazyA[A + LAZY: segment tree]
+    Factory --> StretchA[A + STRETCH: four-value tree]
+    Factory --> LazyB[B + LAZY: block decomposition]
+    LazyA --> API[RangeAnalytics common interface]
+    StretchA --> API
+    LazyB --> API
+    Runner --> API
+    API --> Output[Query results to standard output]
