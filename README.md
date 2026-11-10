@@ -8,7 +8,7 @@
 | Roll number | Name | GitHub username | Role | Analysis question |
 |---|---|---|---|---|
 | 250051013 | Khairnar Soham Nilesh | Soham-Khairnar | Structure A owner (segment tree) | Q1 |
-| [roll no.] | [name] | [username] | Structure B owner (block decomposition) | Q2 |
+| [250008035] | [Smita Singh] | [smitasingh25] | Structure B owner (block decomposition) | Q2 |
 | [roll no.] | [name] | [username] | Application owner | Q3 |
 | [roll no.] | [name] | [username] | Test owner (also builds worst-case inputs) | Q4 |
 | [roll no.] | [name] | [username] | Measurement owner | Q5 |
