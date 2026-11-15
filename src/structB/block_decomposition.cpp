@@ -253,7 +253,7 @@ int main() {
     cout << bd.bestStretch(1, 8) << "\n";   
     cout << bd.bestStretch(4, 4) << "\n";
 
-    bd.rangeAdd(2, 7, 10);                   4
+    bd.rangeAdd(2, 7, 10);                   
     cout << bd.bestStretch(1, 8) << "\n";   
     bd.pointSet(3, -100);                  
     cout << bd.get(3) << "\n";          
