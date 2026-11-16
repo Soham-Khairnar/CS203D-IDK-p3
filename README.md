@@ -16,10 +16,10 @@
 ## Current status
 
 The application owner's CLI, input validation, shared interface, dispatch, examples,
-and Q3 answer are implemented. Application tests pass with a test-only array backend.
-The production segment tree and block decomposition are **unimplemented scaffolds**;
-their constructors report an error. End-to-end query execution will work once the
-structure owners implement those classes. There is no production array fallback.
+and Q3 answer are implemented. Structure B's LAZY block decomposition and its unit
+tests are implemented. Structure A remains an unimplemented scaffold, so the
+production segment tree and STRETCH route are not ready for end-to-end use. There is
+no production array fallback.
 
 ## Requirements
 

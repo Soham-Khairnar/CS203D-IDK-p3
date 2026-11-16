@@ -129,16 +129,7 @@ Value BlockDecomposition::bestStretch(Index, Index) {
 }
 
 bool BlockDecomposition::checkInvariants() const {
-    for (Index b = 0; b < blocks_; ++b) {
-        Value s = 0, mn = kMaxValue;
-        for (Index i = start(b); i < end(b); ++i) {
-            const Value x = a_[i] + add_[b];
-            s += x;
-            if (x < mn) mn = x;
-        }
-        if (s != sum_[b] || mn != min_[b]) return false;
-    }
-    return true;
+    return selfCheck().empty();
 }
 
 std::string BlockDecomposition::selfCheck() const {

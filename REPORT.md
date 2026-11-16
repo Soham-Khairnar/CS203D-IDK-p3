@@ -9,7 +9,7 @@ commits after they exist.
   output/error handling, build/run scripts, application tests, examples and Q3.
   Integration with completed production backends is pending.
 - Soham: TODO - Structure A implementation, unit tests and Q1.
-- Smita: TODO - Structure B implementation, unit tests and Q2.
+- Smita Singh: Structure B LAZY block decomposition, unit tests and Q2.
 - Test owner: Shrawan Kumar Prajapati (250008033, shrawanprajapati) - plain-array oracle with Kadane, seeded workload generator, differential test, invariant checker, worst-case input generator and cost model (`tests/`), Q4.
 - Measurement owner: TODO - name, benchmarks, data, figures and Q5.
 
@@ -35,9 +35,29 @@ design choice and diagram. Implement src/structA/segment_tree.cpp and unit tests
 
 ## 4. Structure B: Block decomposition
 
-TODO (Smita): storage, pending adds, partial/full blocks, operations/complexity,
-block-size choice and diagram. Explain the LAZY-only restriction. Implement
-src/structB/block_decomposition.cpp and unit tests.
+`BlockDecomposition` stores the readings in `a_` and three values per block: its
+sum, minimum and pending addition. The readings exclude the pending addition `t`,
+so the actual value at position `i` in block `b` is `a_[i] + t[b]`. The cached
+aggregate invariant is
+
+```text
+sum[b] = Σ(a[i] + t[b])      min[b] = min(a[i] + t[b])
+```
+
+An addition `x` covering a complete block of length `k` changes its cached values
+and tag in constant time: `sum += k*x`, `min += x`, `t += x`. A partial-block
+addition first pushes the tag into its readings, changes the selected readings,
+then rebuilds the block's sum and minimum. A sum or minimum query uses the cached
+aggregate for each complete block and inspects individual readings in partial
+blocks. Point assignment pushes the affected block before replacing the raw
+reading, because assignment is absolute, then rebuilds its aggregates. All three
+operations take `O(B + n/B)` time for block size `B`; storage is `O(n + n/B)`.
+The constructor defaults to `floor(sqrt(n))`, making the worst-case operation time
+`O(sqrt(n))`, and allows a block-size override for measurement. The final block may
+be shorter and its actual length is used for full-block additions. Structure B
+implements only LAZY mode: STRETCH needs ordered prefix/suffix/best summaries that
+this block backend does not store. Its internal sum/minimum invariant is exposed
+through `Inspectable::selfCheck()`.
 
 ## 5. Testing
 
@@ -67,7 +87,29 @@ TODO: derive four-value merge equations and demonstrate associativity on an exam
 
 ### Q2 (author: Smita Singh)
 
-TODO: block pending-add correctness and the sqrt(n) block-size bound.
+For each block, let `a[i]` be its stored raw readings and `t` its pending addition.
+The actual reading is `a[i] + t`. The block stores `sum = Σ(a[i] + t)` and
+`min = min(a[i] + t)`. If an update adds `x` to every value in a complete block of
+length `k`, then its new sum is the old sum plus `kx`, its new minimum is the old
+minimum plus `x`, and its new pending value is `t + x`. These three changes preserve
+the invariant without touching the readings.
+
+Before touching only part of a block, the implementation pushes its pending value:
+it adds `t` to each raw reading and resets `t` to zero. It can then update or inspect
+the selected readings and rebuild the cached sum and minimum. Assignment follows
+the same push step, then replaces the selected reading outright. Thus a prior
+pending addition is included in the other readings but cannot leak into the new
+assigned value. Full-block queries read their cached aggregates; partial-block
+queries use `a[i] + t`, so both paths return values under the same invariant.
+
+With block length `B` and `n` readings, a range touches at most two partial blocks,
+which cost `O(B)` to scan or rebuild, and at most `ceil(n/B)` complete blocks,
+which cost `O(1)` each. Therefore addition, sum and minimum take
+`O(B + n/B)` time; point assignment takes `O(B)`. The two terms balance when
+`B` is near `sqrt(n)`: for positive `B`, `B + n/B >= 2sqrt(n)`, with equality at
+`B = sqrt(n)`. The default `floor(sqrt(n))` is within the same asymptotic bound.
+This gives `O(sqrt(n))` worst-case operations and `O(n)` storage. The constructor's
+block-size override supports empirical tuning without changing the invariant.
 
 ### Q3 (author: Abhishek Verma)
 

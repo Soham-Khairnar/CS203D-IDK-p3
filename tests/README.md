@@ -6,6 +6,7 @@
 | `invariants.hpp` | Invariant checker: black-box (public API) and white-box (`Inspectable::selfCheck`) |
 | `workload.hpp` | Seeded workload generator, 7 profiles: mixed, short, long, edges, lazy_then_set, allneg, big |
 | `differential_test.cpp` | Oracle vs Structure A vs Structure B; prints seed, config and failing operation |
+| `../src/structB/block_decomposition_test.cpp` | Unit tests for block sizes, partial blocks, assignments, updates, queries and invariants |
 | `gen_worst_cases.py` | Worst-case, best-case and random LAZY inputs in the section 4 format |
 | `worst_case_model.py` | Cost model used to find and justify worst-case ranges |
 | `application_test.cpp` | CLI/application tests (Application owner) |

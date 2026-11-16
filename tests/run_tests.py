@@ -32,6 +32,13 @@ def app_tests():
     print("CLI argument/error tests passed.")
 
 
+def structure_b_tests():
+    target = executable("block_decomposition_test")
+    compile_cpp(target, ["src/structB/block_decomposition_test.cpp",
+                         "src/structB/block_decomposition.cpp"])
+    subprocess.run([str(target)], check=True)
+
+
 def differential_test(extra_args):
     target = executable("differential_test")
     compile_cpp(target, ["tests/differential_test.cpp", *SOURCES])
@@ -41,6 +48,7 @@ def differential_test(extra_args):
 
 def main():
     app_tests()
+    structure_b_tests()
     differential_test(sys.argv[1:])
 
 
