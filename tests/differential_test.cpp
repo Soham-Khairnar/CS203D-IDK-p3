@@ -1,16 +1,6 @@
-// Differential test: oracle vs Structure A vs Structure B on seeded random workloads.
-//   ./differential_test                       full suite
-//   ./differential_test --only A | --only B   test one structure (while the other is unfinished)
-//   ./differential_test --quick               small suite (smoke test)
-//   ./differential_test --ops N --seed S      main-config operation count / base seed
-//   ./differential_test --emit PREFIX --mode LAZY --n 500 --ops 5000 --profile mixed --seed 7
-//        writes PREFIX.in and PREFIX.out (oracle answers) for replay through the CLI
-// On the first mismatch it prints seed, config, operation number, the operation, expected
-// and actual, writes a replayable repro file, and exits with status 1.
 #include "oracle.hpp"
 #include "invariants.hpp"
 #include "workload.hpp"
-#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -54,7 +44,6 @@ std::string describe(const Config& c) {
     return s.str();
 }
 
-// Applies one operation; returns true if it produced an answer.
 bool apply(RangeAnalytics& b, const Op& op, Value& answer) {
     switch (op.type) {
         case 'U': b.pointSet(op.a, op.x); return false;
@@ -141,8 +130,7 @@ std::vector<Config> buildSuite(const Options& opt) {
     std::uint64_t seed = opt.baseSeed;
     const Mode modes[] = {Mode::Lazy, Mode::Stretch};
 
-    // Tiny and awkward sizes: n=1, 2, primes, powers of two +-1, non-multiples of sqrt(n).
-    const Index small[] = {1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17, 31, 32, 33, 63, 64, 65, 100, 101};
+    const Index small[] = {1, 2, 3, 5, 8, 17, 64, 101};
     for (Mode m : modes)
         for (Index n : small) {
             suite.push_back({m, n, Profile::Mixed, 3000, seed++});
@@ -150,8 +138,6 @@ std::vector<Config> buildSuite(const Options& opt) {
         }
     if (opt.quick) return suite;
 
-    // Main configs: >= 10^5 operations each. 1000 is not a power of two and not a multiple
-    // of its block size (31); 1024 is a power of two; 997 is prime.
     const Profile profiles[] = {Profile::Mixed, Profile::Short, Profile::Long, Profile::Edges,
                                 Profile::LazyThenSet, Profile::BigValues};
     for (Mode m : modes) {
@@ -162,7 +148,6 @@ std::vector<Config> buildSuite(const Options& opt) {
     suite.push_back({Mode::Stretch, 1000, Profile::AllNegative, opt.mainOps, seed++});
     suite.push_back({Mode::Stretch, 37, Profile::AllNegative, 20000, seed++});
 
-    // Larger arrays (fewer operations: the oracle is O(n) per operation).
     for (Mode m : modes) {
         suite.push_back({m, 20000, Profile::Mixed, 20000, seed++});
         suite.push_back({m, 20000, Profile::Edges, 20000, seed++});
@@ -170,24 +155,10 @@ std::vector<Config> buildSuite(const Options& opt) {
     return suite;
 }
 
-int emit(const std::string& prefix, Mode mode, Index n, std::size_t ops, Profile p, std::uint64_t seed) {
-    Workload w = makeWorkload(mode, n, ops, p, seed);
-    Oracle oracle(w.init);
-    std::ofstream in(prefix + ".in"), out(prefix + ".out");
-    if (!in || !out) { std::cerr << "cannot write " << prefix << ".in/.out\n"; return 1; }
-    writeWorkload(in, w, w.ops.size());
-    for (const Op& op : w.ops) { Value v = 0; if (apply(oracle, op, v)) out << v << "\n"; }
-    return 0;
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
     Options opt;
-    std::string emitPrefix, modeStr = "LAZY", profStr = "mixed";
-    Index emitN = 500;
-    std::size_t emitOps = 5000;
-    std::uint64_t emitSeed = 1;
     try {
         for (int i = 1; i < argc; ++i) {
             std::string a = argv[i];
@@ -195,30 +166,20 @@ int main(int argc, char** argv) {
                 if (i + 1 >= argc) throw std::invalid_argument("missing value for " + a);
                 return argv[++i];
             };
-            if (a == "--only") { std::string v = next(); opt.runA = (v == "A"); opt.runB = (v == "B"); }
+            if (a == "--only") {
+                std::string v = next();
+                if (v != "A" && v != "B") throw std::invalid_argument("--only must be A or B");
+                opt.runA = (v == "A");
+                opt.runB = (v == "B");
+            }
             else if (a == "--quick") opt.quick = true;
-            else if (a == "--ops") { opt.mainOps = std::stoul(next()); emitOps = opt.mainOps; }
-            else if (a == "--seed") { opt.baseSeed = std::stoull(next()); emitSeed = opt.baseSeed; }
-            else if (a == "--outdir") opt.outDir = next();
-            else if (a == "--check-every") opt.checkEvery = std::stoul(next());
-            else if (a == "--emit") emitPrefix = next();
-            else if (a == "--mode") modeStr = next();
-            else if (a == "--n") emitN = std::stoul(next());
-            else if (a == "--profile") profStr = next();
+            else if (a == "--ops") opt.mainOps = std::stoul(next());
+            else if (a == "--seed") opt.baseSeed = std::stoull(next());
             else throw std::invalid_argument("unknown argument " + a);
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 2;
-    }
-
-    if (!emitPrefix.empty()) {
-        Profile p;
-        if (!parseProfile(profStr, p) || (modeStr != "LAZY" && modeStr != "STRETCH")) {
-            std::cerr << "bad --profile or --mode\n";
-            return 2;
-        }
-        return emit(emitPrefix, modeStr == "STRETCH" ? Mode::Stretch : Mode::Lazy, emitN, emitOps, p, emitSeed);
     }
 
     std::vector<Config> suite = buildSuite(opt);

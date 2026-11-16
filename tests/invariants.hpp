@@ -1,12 +1,4 @@
 #pragma once
-// Invariant checker. Two layers:
-//  1. Black-box (works on ANY backend through the public API): properties that every
-//     correct structure must satisfy, checked against the oracle's array and against
-//     each other (additivity of sums, min of halves, stretch bounds).
-//  2. White-box (optional): if the backend inherits sensor::Inspectable, its own
-//     selfCheck() is called to verify internal fields (stored sums/minima, pending adds,
-//     four-value merges).
-// Both return "" when everything holds, otherwise a description of the first violation.
 #include "../src/inspectable.hpp"
 #include "../src/range_analytics.hpp"
 #include "workload.hpp"
@@ -26,13 +18,10 @@ inline std::string rangeText(Index l, Index r) {
     return "[" + std::to_string(l) + ".." + std::to_string(r) + "]";
 }
 
-// `truth` is the oracle's current array. `rng` supplies sample positions.
 inline std::string blackBoxCheck(RangeAnalytics& b, Mode mode, const std::vector<Value>& truth,
                                  Rng& rng, int samples = 40) {
     const Index n = truth.size();
 
-    // (1) Point sweep: every single position must read back its true value, in every
-    // query type the mode supports. Catches stale lazy tags and un-rebuilt blocks.
     auto checkPoint = [&](Index i) -> std::string {
         Value v = truth[i - 1];
         if (b.rangeSum(i, i) != v) return "point " + std::to_string(i) + ": sum " + std::to_string(b.rangeSum(i, i)) + " != " + std::to_string(v);
@@ -51,7 +40,6 @@ inline std::string blackBoxCheck(RangeAnalytics& b, Mode mode, const std::vector
         }
     }
 
-    // (2) Self-consistency of random ranges split at a random point m.
     for (int s = 0; n >= 2 && s < samples; ++s) {
         Index l = static_cast<Index>(rng.uni(1, static_cast<Value>(n - 1)));
         Index r = static_cast<Index>(rng.uni(static_cast<Value>(l + 1), static_cast<Value>(n)));

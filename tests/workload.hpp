@@ -1,6 +1,4 @@
 #pragma once
-// Seeded workload generator. Same seed => byte-identical workload on every compiler
-// (we do NOT use std::uniform_int_distribution: its output differs between libraries).
 #include "../src/range_analytics.hpp"
 #include <algorithm>
 #include <cmath>
@@ -33,13 +31,6 @@ inline const char* profileName(Profile p) {
     return "?";
 }
 
-inline bool parseProfile(const std::string& s, Profile& out) {
-    const Profile all[] = {Profile::Mixed, Profile::Short, Profile::Long, Profile::Edges,
-                           Profile::LazyThenSet, Profile::AllNegative, Profile::BigValues};
-    for (Profile p : all) if (s == profileName(p)) { out = p; return true; }
-    return false;
-}
-
 struct Workload {
     Mode mode;
     std::vector<Value> init;
@@ -50,7 +41,6 @@ class Rng {
     std::mt19937_64 g;
 public:
     explicit Rng(std::uint64_t seed) : g(seed) {}
-    // inclusive range; tiny modulo bias is irrelevant for testing
     Value uni(Value lo, Value hi) {
         return lo + static_cast<Value>(g() % static_cast<std::uint64_t>(hi - lo + 1));
     }
@@ -75,8 +65,6 @@ inline Workload makeWorkload(Mode mode, Index n, std::size_t numOps, Profile pro
     for (Index i = 0; i < n; ++i)
         w.init.push_back(neg ? rng.uni(-valMax, -1) : rng.uni(-valMax, valMax));
 
-    // Candidate endpoints for the Edges profile: array ends and block boundaries
-    // (the block size used by the block decomposition is about sqrt(n)).
     std::vector<Index> cand;
     Index B = std::max<Index>(1, static_cast<Index>(std::sqrt(static_cast<double>(n))));
     const Index fixed[] = {1, 2, 3, n >= 2 ? n - 1 : 1, n >= 3 ? n - 2 : 1, n};
@@ -126,7 +114,6 @@ inline Workload makeWorkload(Mode mode, Index n, std::size_t numOps, Profile pro
     for (std::size_t k = 0; k < numOps; ++k) {
         Op op{'S', 1, 1, 0};
         if (profile == Profile::LazyThenSet) {
-            // A on a range, U inside it (must override the pending add), then queries on it.
             std::size_t phase = k % 4;
             if (phase == 0) pickRange(cl, cr);
             if (mode == Mode::Lazy) {
@@ -166,7 +153,6 @@ inline std::string opText(const Op& o) {
     return std::string(1, o.type) + " " + std::to_string(o.a) + " " + std::to_string(o.b);
 }
 
-// Writes the first `count` operations in the exact section-4 input format.
 inline void writeWorkload(std::ostream& out, const Workload& w, std::size_t count) {
     out << (w.mode == Mode::Lazy ? "LAZY " : "STRETCH ") << w.init.size() << "\n";
     for (std::size_t i = 0; i < w.init.size(); ++i) out << (i ? " " : "") << w.init[i];

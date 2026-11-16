@@ -1,8 +1,7 @@
 #pragma once
-// Oracle (answer key): a plain array with plain loops. It shares NO code with the
-// segment tree or the block decomposition, so a bug in either cannot hide here.
 #include "../src/range_analytics.hpp"
 #include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -13,10 +12,11 @@ class Oracle final : public RangeAnalytics {
     std::vector<Value> a;  // zero-based storage; public API is 1-based
 
     static Value add(Value x, Value y) {
-        Value r;
-        if (__builtin_add_overflow(x, y, &r))
+        const Value hi = std::numeric_limits<Value>::max();
+        const Value lo = std::numeric_limits<Value>::min();
+        if ((y > 0 && x > hi - y) || (y < 0 && x < lo - y))
             throw std::overflow_error("oracle: int64 overflow (workload outside supported range)");
-        return r;
+        return x + y;
     }
     void check(Index l, Index r) const {
         if (l < 1 || r < l || r > a.size())

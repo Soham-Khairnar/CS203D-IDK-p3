@@ -1,25 +1,4 @@
 #!/usr/bin/env python3
-"""Generate worst-case / best-case / random LAZY workloads in the section-4 input format.
-
-Examples (run from the repository root; standard library only):
-  python tests/gen_worst_cases.py --n 10000 100000 1000000 --ops 100000 --seed 1
-  python tests/gen_worst_cases.py --n 1000 --ops 2000 --with-expected      # small, verifiable
-  python tests/gen_worst_cases.py --n 1000000 --block-size 500             # for block-size sweeps
-
-Files written to --outdir (default build/workloads, which .gitignore already excludes):
-  tree_worst_n<N>.in    ranges that make the segment-tree query visit the most nodes,
-                        in a cycle  A l r x / S l r / M l r  so lazy tags are always pending
-  tree_best_n<N>.in     whole-array ranges: a segment tree only ever touches the root
-  block_worst_n<N>.in   ranges that make block decomposition scan both end blocks fully and
-                        step over every whole block between them
-  short_n<N>.in         ranges of length 1..10 at random positions (cheap for blocks)
-  random_n<N>.in        uniformly random ranges (baseline)
-  manifest.csv          file, kind, n, ops, seed, block size, and the MODEL cost per range
-                        (tree nodes visited / block element touches + block steps)
-
---with-expected also writes <file>.out from a plain-Python oracle, so the CLI can be diffed
-against it. Only sensible for small n (the oracle is O(n) per operation).
-"""
 import argparse
 import csv
 import os
@@ -33,8 +12,7 @@ from worst_case_model import (block_cost, block_worst_pool, default_block_size, 
 KINDS = ["tree_worst", "tree_best", "block_worst", "short", "random"]
 
 
-def range_stream(kind, n, B, rng, pool):
-    """Yield one (l, r) per cycle of three operations."""
+def range_stream(kind, n, rng, pool):
     while True:
         if kind == "tree_worst" or kind == "block_worst":
             yield rng.choice(pool)
@@ -58,7 +36,7 @@ def make_file(kind, n, ops, seed, B):
     elif kind == "block_worst":
         pool = block_worst_pool(n, B)
     lines, ranges = [], []
-    stream = range_stream(kind, n, B, rng, pool)
+    stream = range_stream(kind, n, rng, pool)
     while len(lines) < ops:
         l, r = next(stream)
         ranges.append((l, r))
