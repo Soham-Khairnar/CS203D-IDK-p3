@@ -132,7 +132,7 @@ Tests inject a backend through `BackendFactory`; production uses `makeBackend`.
 |---|---|
 | `app/`, interface, factory, build/launcher scripts | Abhishek: implemented; integrate completed backends |
 | `src/structA/` | Soham: LAZY/STRETCH segment tree and unit tests; see local README |
-| `src/structB/` | Smita: LAZY block decomposition and unit tests; see local README |
+| `src/structB/` | Smita Singh: completed LAZY block decomposition, unit tests and Q2; see local README |
 | `tests/` | Test owner: full oracle, differential tests, invariants, worst-case inputs |
 | `bench/`, `results/` | Measurement owner: timings, memory, CSV and figures |
 | `REPORT.md` | Each member: complete assigned sections and analysis answer |
