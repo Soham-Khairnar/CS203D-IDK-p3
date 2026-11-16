@@ -10,7 +10,7 @@ commits after they exist.
   Integration with completed production backends is pending.
 - Soham: TODO - Structure A implementation, unit tests and Q1.
 - Smita: TODO - Structure B implementation, unit tests and Q2.
-- Test owner: TODO - name, oracle, differential tests, invariants, worst-case inputs, Q4.
+- Test owner: Shrawan Kumar Prajapati (250008033, shrawanprajapati) - plain-array oracle with Kadane, seeded workload generator, differential test, invariant checker, worst-case input generator and cost model (`tests/`), Q4.
 - Measurement owner: TODO - name, benchmarks, data, figures and Q5.
 
 ## 2. Problem
@@ -41,16 +41,13 @@ src/structB/block_decomposition.cpp and unit tests.
 
 ## 5. Testing
 
-`python tests/run_tests.py` builds the CLI and application tests. Tests inject a
-test-only array backend to verify both LAZY routes, STRETCH, assignment after range
-addition, negative stretches, 64-bit values, input errors, CRLF/EOF handling and
-parsing n = 1,000,000. CLI tests verify help, arguments and unsupported B/STRETCH.
-These passed with MinGW GCC 6.3.0 on Windows. They do not verify either production
-data structure, which remains an explicit scaffold.
+**Oracle.** `tests/oracle.hpp` keeps a plain array. Range add, sum and minimum use loops, and best stretch uses Kadane's algorithm initialised with the first element so an all-negative range returns its largest value.
 
-TODO (Test owner): at least 100,000 fixed-seed random operations as specified,
-oracle, invariant checks, seeds/counts/results and bugs found. Follow tests/README.md.
-Add sample-file integration tests when production structures are implemented.
+**Differential test.** `tests/differential_test.cpp` replays the same seeded random operations on the oracle, Structure A and Structure B (LAZY: A, B and oracle; STRETCH: A and oracle) and compares every query answer. Base seed 203003; each configuration uses base seed + its index. The main configurations run 100,000 operations each over seven profiles (mixed, short, long, edges, lazy_then_set, allneg, big), including full and single-element ranges, negative values, point sets after range adds, queries crossing block boundaries and all-negative stretches. Total operations compared: [N]. Result: [ALL PASSED / describe failures]. On a mismatch the test prints the seed, configuration, operation number, expected and actual values, and writes a replayable repro file.
+
+**Invariant checker.** Every 500 operations: (1) black-box checks on any backend: every position reads back its true value, range sums are additive over splits, a range minimum equals the minimum of its two halves, and best stretch is at least the largest element and at most the range maximum-sum bound; (2) white-box checks through `Inspectable::selfCheck()`: stored node sums and minima equal the true values, pending tags are consistent, four-value merges are correct in STRETCH mode, and block sums, minima and pending adds are consistent. Invariant checks run: [N].
+
+**Bugs found.** [list each bug: what failed, which structure, which seed/operation, how it was fixed; or write "none found"].
 
 ## 6. Measurements
 
@@ -116,9 +113,17 @@ addition changes a fixed number of values in two children, also O(1). Thus these
 range queries take O(log n) time. The argument requires returning a stored summary
 on full coverage instead of traversing every reading in that interval.
 
-### Q4 (author: [name])
+### Q4 (author: Shrawan Kumar Prajapati)
 
-TODO: lazy-tag composition, sum/minimum correctness and Kadane oracle correctness.
+**What a pending value means.** In lazy mode a node `v` covering `len` readings stores `sum`, `min` and a pending value `t`. The stored `sum` and `min` of `v` already include every add applied to `v`'s whole segment. The pending `t` is the amount that still has to be added to each reading in the two children, which have not been updated yet.
+
+**Applying an add to a fully covered node.** Adding `x` to every reading of a segment of length `len` increases its sum by `x * len` and its minimum by `x`. So `sum += x * len`, `min += x`, `t += x`, in O(1) without visiting the children.
+
+**Why two pending adds combine into one.** Adding `t1` and then `t2` to a reading `a` gives `(a + t1) + t2 = a + (t1 + t2)`. Integer addition is associative, so the order and grouping do not matter and one stored value `t1 + t2` is equivalent to the two adds. Pushing down moves `t` to the children: `child.sum += t * child.len`, `child.min += t`, `child.t += t`, then `t = 0`. Each child's stored values stay correct for its own segment, and the parent's values were already correct, so nothing is double counted.
+
+**Why stored sum and minimum stay correct.** Invariant: for every node, `sum` and `min` are correct for its segment with all updates applied at the node or below, and only the tags of its ancestors are missing. A query or update pushes the tags down along its path before using the children, so every value it reads satisfies the invariant. After the recursive calls the node is recomputed as `sum = left.sum + right.sum` and `min = min(left.min, right.min)`. This restores the invariant, and with it the correctness of the sum and minimum answers.
+
+**Why Kadane's algorithm is a correct oracle for best stretch.** Let `e[i]` be the largest sum of a non-empty stretch ending at `i`. Such a stretch is either `a[i]` alone or a stretch ending at `i-1` extended by `a[i]`; replacing the part ending at `i-1` by the best one can only help, so `e[i] = max(a[i], e[i-1] + a[i])` with `e[l] = a[l]`. Every non-empty stretch in `[l..r]` ends at some `i`, so the answer is `max e[i]`. Starting from `a[l]` instead of 0 guarantees at least one reading is chosen, so an all-negative range returns its largest value, as the specification requires. The oracle is also independent of the segment tree: it uses only a plain array and loops.
 
 ### Q5 (author: [name])
 

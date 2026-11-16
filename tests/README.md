@@ -1,24 +1,37 @@
-# Testing handoff
+# Tests (Test owner: Shrawan Kumar Prajapati)
 
-`python tests/run_tests.py` builds and checks the application using a test-only
-array backend. It covers routing, input validation, output, both modes, 1-based
-boundaries, 64-bit values, and parsing one million readings. It does not establish
-correctness or performance of either production data structure.
+| File | Purpose |
+|---|---|
+| `oracle.hpp` | Plain-array oracle: loops for sum/min/add, Kadane for non-empty best stretch |
+| `invariants.hpp` | Invariant checker: black-box (public API) and white-box (`Inspectable::selfCheck`) |
+| `workload.hpp` | Seeded workload generator, 7 profiles: mixed, short, long, edges, lazy_then_set, allneg, big |
+| `differential_test.cpp` | Oracle vs Structure A vs Structure B; prints seed, config and failing operation |
+| `gen_worst_cases.py` | Worst-case, best-case and random LAZY inputs in the section 4 format |
+| `worst_case_model.py` | Cost model used to find and justify worst-case ranges |
+| `application_test.cpp` | CLI/application tests (Application owner) |
+| `examples/` | Sample `.in` / `.out` files in the examiner format |
 
-Test owner TODO:
+## Run (from the repository root)
 
-- Implement a separate plain-array oracle; use Kadane for nonempty best stretch.
-- Add unit tests with the structure owners and differential tests of at least
-  100,000 fixed-seed random operations in LAZY (A/B/oracle) and STRETCH (A/oracle).
-- Record seeds and operation counts; print the seed and failing operation on error.
-- Include full/single-element ranges, negative values, point sets after range adds,
-  repeated updates, all-negative stretches, and queries crossing block boundaries.
-- Check lazy segment-tree aggregates and pending-tag consistency; check four-value
-  merges in stretch mode; check block sums/minima including pending additions.
-  Agree on debug inspection hooks with the structure owners.
-- Build worst-case ranges touching many tree nodes or partial blocks (five-person team).
-- Once backends are ready, replay `examples/*.in` against the production CLI and
-  compare to the corresponding `.out` files. Compare A and B on LAZY inputs.
+    python tests/run_tests.py                 # application tests + full differential suite
+    python tests/run_tests.py --only A        # one structure while the other is unfinished
+    python tests/run_tests.py --quick         # smoke test
+    python tests/run_tests.py --ops 100000 --seed 203003
 
-Suggested future files: `oracle.hpp`, `differential_test.cpp`,
-`invariants.hpp`, `worst_cases.cpp`. These are pending work, not passing tests.
+The main configurations use 100,000 operations each with fixed base seed 203003
+(each configuration uses base seed + its index). On a mismatch the test prints the
+seed, config, operation number, expected and actual values, and writes a replayable
+`build/fail_*.in` file.
+
+## Worst-case inputs
+
+    python tests/gen_worst_cases.py --n 10000 100000 1000000 --ops 100000 --seed 1
+    python tests/worst_case_model.py          # brute-force evidence for the model
+
+Files go to `build/workloads/` with a `manifest.csv` listing file, kind, n, ops, seed and model cost.
+
+## Limitation
+
+Differential and invariant tests only pass once Structure A and B are implemented.
+White-box checks need the backend to inherit `sensor::Inspectable`; otherwise only
+black-box checks run.
