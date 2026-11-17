@@ -114,7 +114,7 @@ By induction over the operations, all query results are correct.
 | Tree storage | $\Theta$(n) | `2n-1` logical nodes; often `4n` slots allocated |
 | Recursive call stack | O(log n) | At most tree height |
 
-## 11. Predictions to Check in Benchmarks
+## 10. Predictions to Check in Benchmarks
 
 - Build time should grow approximately linearly with `n`.
 - Point assignments should exhibit logarithmic scaling.
