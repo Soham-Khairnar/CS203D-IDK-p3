@@ -1,3 +1,4 @@
+#include "bench_common.hpp"
 #include "../src/structA/lazy_segtree.hpp"
 
 int main(int argc, char** argv) {
