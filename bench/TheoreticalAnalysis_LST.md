@@ -2,123 +2,116 @@
 
 ## 1. Problem and Supported Operations
 
-Given an array `a[1..n]` of sensor readings, support these operations using **1-based, inclusive indices**:
+The tree stores a nonempty array of sensor readings. Indices are 1-based and both range endpoints are included. Assume valid indices, constant-time arithmetic and no overflow.
 
 | Operation | Meaning |
 |---|---|
-| `U i v` | Set `a[i] = v` |
-| `A l r x` | Add `x` to every element in `[l,r]` |
-| `S l r` | Return the sum of elements in `[l,r]` |
-| `M l r` | Return the minimum element in `[l,r]` |
+| **U i v** | Replace the reading at index i with v |
+| **A l r x** | Add x to each reading in the requested range |
+| **S l r** | Return the sum over the requested range |
+| **M l r** | Return the minimum over the requested range |
 
-Assume valid indices, constant-time arithmetic and no integer overflow. This chapter covers **LAZY mode only**.
+## 2. Lazy Propagation
 
-## 2. Lazy Propagation: Apply, Push and Pull
+**Apply.** For a fully covered node, update its sum, minimum and pending tag. Here ℓ is the length of the node's interval.
 
-**Apply an addition `x` to a fully covered node of length `len`:**
+$$
+\begin{aligned}
+\mathrm{sum} &\gets \mathrm{sum}+x\ell \\
+\mathrm{mn} &\gets \mathrm{mn}+x \\
+\mathrm{lz} &\gets \mathrm{lz}+x.
+\end{aligned}
+$$
 
-```text
-sum  += x * len
-mn   += x
-lazy += x
-```
+**Push.** Apply the parent's pending tag to both children using their respective lengths, then clear the tag. The parent's aggregates retain their values.
 
-This works because adding `x` to `len` elements increases their sum by `x*len` and their minimum by `x`. Pending additions combine by addition.
+**Pull.** With the parent tag cleared, combine its children's aggregates.
 
-**Push:** Before descending into children, apply the parent's pending `lazy` value to both children, then clear the parent's tag. Its own aggregates are already correct and do not change.
+$$
+\mathrm{sum}_P=\mathrm{sum}_L+\mathrm{sum}_R,\qquad
+\mathrm{mn}_P=\min(\mathrm{mn}_L,\mathrm{mn}_R).
+$$
 
-**Pull:** After changing a child, recompute the parent's `sum` and `mn` from its children. Push a pending parent tag before pulling.
+## 3. Building the Tree
 
-Each primitive takes **$\Theta$(1)** time.
+Each leaf stores its reading as both sum and minimum. All tags start at zero. Internal nodes build both children before pulling. Every internal node has two children, so the number of logical nodes is
 
-## 3. Building the Tree — $\Theta$(n)
+$$
+N_{\mathrm{nodes}}=2n-1.
+$$
 
-At a leaf, set `sum = mn = a[i]` and `lazy = 0`. At an internal node, build both children and then pull their aggregates.
+For a power-of-two input size, the build recurrence is
 
-For `n` a power of two:
+$$
+T(1)\in\Theta(1),\qquad T(n)=2T(n/2)+\Theta(1),\qquad T(n)\in\Theta(n).
+$$
 
-$$t(n) = 2t(n/2) + \Theta(1) = \Theta(n)$$
+## 4. Range Addition
 
+Return immediately on no overlap. Apply the addition and stop on complete overlap. On partial overlap, push the tag, recurse into both children and pull the parent. Only intervals containing a query boundary can require further splitting, so at most two nodes per depth are partially covered.
 
-For arbitrary `n`, the tree still contains exactly `2n-1` logical nodes, each requiring constant work. Thus **build time is Theta(n)**.
+$$
+h=\lceil\log_2 n\rceil,\qquad V_{\mathrm{range}}(n)\le 1+4h.
+$$
 
-## 4. Range Addition `A l r x` — O(log n)
+A full-array update stops at the root. A singleton update descends to a leaf, giving a matching logarithmic worst-case lower bound for growing inputs.
 
-For a node covering `[L,R]`:
+## 5. Range Sum
 
-1. **No overlap:** Return without changes.
-2. **Complete overlap:** Apply `x` to the node and stop; do not visit its children.
-3. **Partial overlap:** Push the pending tag, update intersecting children, then pull the parent.
+Return zero on no overlap and the cached sum on complete overlap. On partial overlap, push the tag and add the results from both children. The fully covered intervals partition the requested range.
 
-**Complexity:** At any depth, only nodes crossing the left or right boundary of `[l,r]` need further splitting. There are at most two such partially covered nodes, producing only a constant number of visited nodes per level. The tree has `O(log n)` levels.
+$$
+S(l,r)=\sum_{i=l}^{r}a_i.
+$$
 
-Therefore the **worst-case time is $\Theta$(log n)**. Updating the full array `[1,n]` stops at the root and takes **Theta(1)**.
+## 6. Range Minimum
 
-## 5. Range Sum `S l r` — O(log n)
+Return the largest representable reading on no overlap and the cached minimum on complete overlap. On partial overlap, push the tag and take the smaller child result.
 
-For each visited node:
+$$
+M(l,r)=\min_{l\le i\le r}a_i.
+$$
 
-1. **No overlap:** Return `0`.
-2. **Complete overlap:** Return the stored `sum`.
-3. **Partial overlap:** Push, query the relevant children and add their results.
+## 7. Point Assignment
 
-The fully covered intervals are disjoint and together form the requested range, so their sums give the correct answer.
+The implementation queries the current reading and then adds the difference between the target and current readings over the singleton interval. Both traversals push pending ancestor tags as needed. The difference must fit the signed integer type.
 
-The same boundary argument gives **$\Theta$(log n) worst-case time**. A full-array query returns the root sum in **$\Theta$(1)**.
-
-## 6. Range Minimum `M l r` — O(log n)
-
-The traversal is the same as for range sum, except:
-
-1. **No overlap:** Return `+infinity` (a suitable neutral value).
-2. **Complete overlap:** Return the stored `mn`.
-3. **Partial overlap:** Push and return the minimum of the child results.
-
-The minimum over a union of disjoint intervals is the minimum of their individual minima.
-
-Time is **$\Theta$(log n) in the worst case** and **$\Theta$(1)** for a full-array query.
-
-## 7. Point Assignment `U i v` — $\Theta$(log n)
-
-Descend from the root to the leaf for index `i`, pushing pending additions at every internal node. Set the leaf's `sum = mn = v` and clear its leaf tag. Pull the aggregates on the way back.
-
-**Why push first?** Point assignment *replaces* the value. If an older pending addition were applied after the assignment, the new value would be incorrect.
-
-Exactly one child is visited at each level:
-
-
-$$T(n)=T(\lceil n/2\rceil)+\Theta(1)=\Theta(\log n)\quad(n>1).$$
-
+$$
+\Delta=v-S(i,i),\qquad S(i,i)+\Delta=v.
+$$
 
 ## 8. Correctness Argument
 
-The invariant is: **every node's `sum` and `mn` describe the current logical array over its interval; `lazy` records only updates not yet forwarded to descendants.**
+A node's cached aggregates incorporate its own pending tag. To recover the logical aggregates over that node's interval, also account for any tags still held by strict ancestors. If their sum is d, the logical aggregates are
 
-- **After build:** Leaves are correct, and each parent combines correct child aggregates.
-- **After an update:** `apply` modifies a fully covered node exactly; `push` transfers pending changes; `pull` restores parent aggregates after partial updates.
-- **After point assignment:** Previous additions are pushed before the leaf is overwritten.
-- **During queries:** The requested interval is combined from disjoint, correct node aggregates.
+$$
+\mathrm{logical\ sum}=\mathrm{sum}+d\ell,\qquad
+\mathrm{logical\ minimum}=\mathrm{mn}+d.
+$$
 
-By induction over the operations, all query results are correct.
+The build establishes the invariant with zero tags. Applying an addition updates the covered interval. Pushing preserves the logical readings, and pulling restores the parent aggregates after a partial update. Queries push along the paths they follow, so returned aggregates include all relevant updates.
 
 ## 9. Time and Space Complexity Summary
 
-| Operation | Worst-case time | Important special case |
-|---|---|---|
-| Build | $\Theta$(n) | — |
-| Apply / push / pull | $\Theta$(1) | — |
-| Point assignment | $\Theta$(log n) | — |
-| Range addition | $\Theta$(log n) | Full-array update: $\Theta$(1) |
-| Range sum | $\Theta$(log n) | Full-array query: $\Theta$(1) |
-| Range minimum | $\Theta$(log n) | Full-array query: $\Theta$(1) |
-| Tree storage | $\Theta$(n) | `2n-1` logical nodes; often `4n` slots allocated |
-| Recursive call stack | O(log n) | At most tree height |
+$$
+\begin{aligned}
+T_{\mathrm{build}}(n)&\in\Theta(n) \\
+T_{\mathrm{apply/push/pull}}&\in\Theta(1) \\
+T_{\mathrm{point\ assignment}}(n)&\in\Theta(1+\log n) \\
+T_{\mathrm{add/sum/min,\ worst}}(n)&\in\Theta(1+\log n) \\
+T_{\mathrm{add/sum/min,\ full}}&\in\Theta(1) \\
+D_{\mathrm{stack}}(n)&\le 1+\lceil\log_2 n\rceil.
+\end{aligned}
+$$
+
+The benchmark counts three arrays of 64-bit values, excluding container and allocator overhead.
+
+$$
+M_{\mathrm{arrays}}(n)=3(4n+4)\cdot 8\ \mathrm{bytes}=(96n+96)\ \mathrm{bytes}.
+$$
 
 ## 10. Predictions to Check in Benchmarks
 
-- Build time should grow approximately linearly with `n`.
-- Point assignments should exhibit logarithmic scaling.
-- Whole-array additions, sums and minima should be cheaper than many irregular interval operations because they stop at the root.
-- Actual timings may differ from simple complexity curves due to memory access, recursion, caching and compiler optimization.
-
-These are **theoretical predictions, not measured results**. Benchmarks will test them separately.
+- Build time should grow approximately linearly with array size.
+- Point assignment makes two traversals down to a leaf, and irregular ranges can split across several levels.
+- Full-array additions, sums and minima stop at the root. Caching, memory layout and compiler optimization can affect the measured differences.
