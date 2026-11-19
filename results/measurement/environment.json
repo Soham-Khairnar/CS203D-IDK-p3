@@ -1,0 +1,34 @@
+{
+  "quick": false,
+  "sizes": [
+    10000,
+    30000,
+    100000,
+    300000,
+    1000000
+  ],
+  "ops": 200000,
+  "repetitions": 5,
+  "seeds": [
+    42,
+    97
+  ],
+  "profiles": [
+    "short",
+    "long",
+    "mixed"
+  ],
+  "block_sizes": [
+    128,
+    256,
+    512,
+    1000,
+    2048,
+    4096
+  ],
+  "compiler": "g++",
+  "compiler_version": "g++ (MinGW.org GCC-6.3.0-1) 6.3.0",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "backends": "A lazy_segtree.hpp, A stretch_segtree.hpp, B block_decomposition.cpp",
+  "memory": "Only known allocated primary arrays; excludes input, workload, allocators, process overhead"
+}
