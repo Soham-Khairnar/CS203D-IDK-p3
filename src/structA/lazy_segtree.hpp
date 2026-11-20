@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <climits>
+#include <string>
 
 class LazySegTree {
 public:
@@ -33,11 +34,28 @@ public:
 
     int size() const { return n; }
 
+    std::string selfCheck() const {
+        if (n > 0) return check(1, 1, n);
+        return std::string();
+    }
+
 private:
     int n;
     std::vector<ll> sum;
     std::vector<ll> mn;
     std::vector<ll> lz;
+
+    std::string check(int node, int l, int r) const {
+        if (l == r) return std::string();
+        int m = (l + r) / 2;
+        if (sum[node] != sum[2 * node] + sum[2 * node + 1] + lz[node] * (r - l + 1))
+            return "lazy tree: sum mismatch at node " + std::to_string(node);
+        if (mn[node] != std::min(mn[2 * node], mn[2 * node + 1]) + lz[node])
+            return "lazy tree: min mismatch at node " + std::to_string(node);
+        std::string e = check(2 * node, l, m);
+        if (!e.empty()) return e;
+        return check(2 * node + 1, m + 1, r);
+    }
 
     void pull(int node) {
         sum[node] = sum[2 * node] + sum[2 * node + 1];
