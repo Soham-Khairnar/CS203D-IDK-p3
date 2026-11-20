@@ -15,11 +15,11 @@
 
 ## Current status
 
-The application owner's CLI, input validation, shared interface, dispatch, examples,
-and Q3 answer are implemented. Structure B's LAZY block decomposition and its unit
-tests are implemented. Structure A remains an unimplemented scaffold, so the
-production segment tree and STRETCH route are not ready for end-to-end use. There is
-no production array fallback.
+The application CLI and both structures are implemented. Structure A provides
+LAZY and STRETCH segment trees through the shared interface; Structure B provides
+LAZY block decomposition. Application, unit and differential testing, worst-case
+tools and benchmark code/results are present. Full test and end-to-end status
+should be refreshed after Structure A integration.
 
 ## Requirements
 
@@ -39,9 +39,7 @@ python tests/run_tests.py
 python bench/benchmark.py
 ```
 
-The run command currently reports the missing Structure A implementation. The
-benchmark command exits with a not-implemented message. Neither is a successful
-end-to-end project run yet.
+The LAZY examples work with either structure; STRETCH examples require Structure A.
 
 After the structures are implemented, equivalent direct examiner commands are:
 
@@ -131,7 +129,7 @@ Tests inject a backend through `BackendFactory`; production uses `makeBackend`.
 | Location | Owner / next work |
 |---|---|
 | `app/`, interface, factory, build/launcher scripts | Abhishek: implemented; integrate completed backends |
-| `src/structA/` | Soham: LAZY/STRETCH segment tree and unit tests; see local README |
+| `src/structA/` | Soham: LAZY/STRETCH segment trees, shared-interface adapter, unit tests and Q1 |
 | `src/structB/` | Smita Singh: completed LAZY block decomposition, unit tests and Q2; see local README |
 | `tests/` | Test owner: full oracle, differential tests, invariants, worst-case inputs |
 | `bench/`, `results/` | Measurement owner: timings, memory, CSV and figures |
@@ -139,9 +137,6 @@ Tests inject a backend through `BackendFactory`; production uses `makeBackend`.
 
 ## Known limitations
 
-- Both production backends are placeholders; production query files cannot yet run.
-- Application tests do not verify data-structure correctness or complexity.
-- Full differential/invariant tests, benchmarks, results, report export, and slides
-  remain pending. No performance claims or measurements are available.
-- Two team-member entries still need actual names, roll numbers and usernames.
+- Structure A and B now have implementations; rerun full verification before treating results as final.
+- Full report completion, PDF export, and presentation slides remain pending.
 - The application is a CLI; no React dashboard is included.

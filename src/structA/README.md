@@ -1,7 +1,8 @@
 # Structure A handoff: Soham / Q1
 
-Implement `SegmentTree` in the provided header/source without changing the shared
-1-based inclusive interface. The constructor currently throws intentionally.
+The standalone LAZY and STRETCH trees are implemented in `lazy_segtree.hpp` and
+`stretch_segtree.hpp`. `segment_tree.hpp/.cpp` adapt them to the shared
+`RangeAnalytics` interface used by the app and factory.
 
 - LAZY: store sum, minimum, pending addition; build in O(n), operations O(log n).
   Applying delta to length k changes sum by k*delta, min by delta, and tag by delta.
@@ -11,7 +12,7 @@ Implement `SegmentTree` in the provided header/source without changing the share
   assignment, range sum, and best stretch; reject range add and range minimum.
 - Preserve left-to-right merge order, particularly for partial range queries.
 - Use 64-bit arithmetic and O(n) storage; avoid recursion proportional to n.
-- Add unit tests and coordinate invariant inspection with the Test owner.
-- Complete Q1 in REPORT.md, including the merge equations and associativity example.
+- Unit tests are in `tests/test_structA.cpp` and cover both modes.
+- Q1 is written in REPORT.md with merge equations and an associativity example.
 
-The factory already selects this class for both modes. Do not print from methods.
+The factory selects this adapter for both modes. Do not print from methods.

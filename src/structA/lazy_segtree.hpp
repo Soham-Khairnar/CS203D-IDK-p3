@@ -21,8 +21,7 @@ public:
     }
 
     void point_set(int i, ll v) {
-        ll cur = range_sum(i, i);
-        range_add(i, i, v - cur);
+        set_value(1, 1, n, i, v);
     }
 
     void range_add(int l, int r, ll x) { add(1, 1, n, l, r, x); }
@@ -80,6 +79,19 @@ private:
         int m = (l + r) / 2;
         add(2 * node, l, m, ql, qr, x);
         add(2 * node + 1, m + 1, r, ql, qr, x);
+        pull(node);
+    }
+
+    void set_value(int node, int l, int r, int i, ll value) {
+        if (l == r) {
+            sum[node] = mn[node] = value;
+            lz[node] = 0;
+            return;
+        }
+        push(node, l, r);
+        int m = (l + r) / 2;
+        if (i <= m) set_value(2 * node, l, m, i, value);
+        else set_value(2 * node + 1, m + 1, r, i, value);
         pull(node);
     }
 

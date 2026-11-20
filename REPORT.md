@@ -8,7 +8,7 @@ commits after they exist.
 - Abhishek Verma: shared interface, factory, CLI, input validation and dispatch,
   output/error handling, build/run scripts, application tests, examples and Q3.
   Integration with completed production backends is pending.
-- Soham: TODO - Structure A implementation, unit tests and Q1.
+- Khairnar Soham Nilesh: implemented the LAZY and STRETCH segment trees, Structure A unit tests, and Q1. The application adapter connects both modes to the shared interface.
 - Smita Singh: Structure B LAZY block decomposition, unit tests and Q2.
 - Test owner: Shrawan Kumar Prajapati (250008033, shrawanprajapati) - plain-array oracle with Kadane, seeded workload generator, differential test, invariant checker, worst-case input generator and cost model (`tests/`), Q4.
 - Measurement owner: TODO - name, benchmarks, data, figures and Q5.
@@ -30,8 +30,32 @@ Errors go to stderr with a nonzero exit code. Backends return results without pr
 
 ## 3. Structure A: Segment tree
 
-TODO (Soham): storage, lazy propagation, four-value merge, operations/complexity,
-design choice and diagram. Implement src/structA/segment_tree.cpp and unit tests.
+Structure A uses two modes over an array-backed binary segment tree. Both trees
+store up to `4n + 4` slots and recursively split each interval at its midpoint,
+so build time and memory are O(n), and tree height is O(log n).
+
+In LAZY mode, `LazySegTree` stores a sum, minimum and pending addition in each
+node. A whole-node addition changes sum by `delta * segment_length`, minimum by
+`delta`, and accumulates `delta` in the node's lazy tag. Before descending, the
+tag is applied to both children with their own segment lengths and then cleared.
+Partial updates recompute the parent from its children. Range sum/minimum queries
+return a stored summary for fully covered nodes and recurse only along the query
+boundaries. Point assignment descends to the leaf after pushing tags, writes the
+absolute value directly, and recomputes ancestors. This avoids computing a
+potentially overflowing difference between the new and old values.
+
+In STRETCH mode, `StretchSegTree` stores `(total, prefix, suffix, best)` for each
+interval. Prefix, suffix and best all mean nonempty contiguous stretches. A point
+assignment replaces one leaf and recomputes the path upward. A range query keeps
+left-to-right order when combining partial results. Structure A exposes both
+implementations through `SegmentTree`, the adapter to the shared `RangeAnalytics`
+interface. The adapter rejects operations that are invalid for the selected mode.
+
+Both modes support point assignment and range sum in O(log n); LAZY additionally
+supports range add and minimum in O(log n), while STRETCH supports best stretch in
+O(log n). Structure A does not support range add in STRETCH mode because the
+four-value summary cannot be updated by a uniform offset independently of stretch
+length. Unit coverage is in `src/structA/tests/test_structA.cpp`.
 
 ## 4. Structure B: Block decomposition
 
@@ -83,7 +107,33 @@ TODO (team): choose a structure using measured results and discuss STRETCH suppo
 
 ### Q1 (author: Khairnar Soham Nilesh)
 
-TODO: derive four-value merge equations and demonstrate associativity on an example.
+For a nonempty interval, store four values: total sum `T`, best nonempty prefix
+sum `P`, best nonempty suffix sum `S`, and best nonempty contiguous stretch sum
+`B`. Split an interval into adjacent left and right parts with summaries
+`L = (T_L, P_L, S_L, B_L)` and `R = (T_R, P_R, S_R, B_R)`. Every prefix of their
+concatenation either ends inside the left part, or contains all of the left part
+followed by a prefix of the right. The suffix argument is symmetric. A best
+stretch either lies entirely on one side or crosses the boundary using a suffix
+of the left and a prefix of the right. Therefore:
+
+```text
+T = T_L + T_R
+P = max(P_L, T_L + P_R)
+S = max(S_R, T_R + S_L)
+B = max(B_L, B_R, S_L + P_R)
+```
+
+For example, concatenate `[2, -1]` and `[3, -4]`. The left summary is
+`(1, 2, 1, 2)` and the right summary is `(-1, 3, -1, 3)`. The combined summary
+is `(0, 4, 0, 4)`: the best prefix is `[2, -1, 3]` with sum 4, the best
+suffix is the whole interval with sum 0, and the best stretch is `[2, -1, 3]`.
+Associativity follows because each summary describes the same four properties
+of the represented concatenated sequence: grouping `(A merge B) merge C` or
+`A merge (B merge C)` must produce the unique summary for `A || B || C`. For
+`[2, -1] || [3] || [-4]`, either grouping gives `(0, 4, 0, 4)`. The merge applies
+to nonempty, ordered adjacent intervals. For partial queries, the implementation
+skips an absent side instead of treating it as an ordinary zero summary; that
+preserves correctness when every reading is negative.
 
 ### Q2 (author: Smita Singh)
 

@@ -12,7 +12,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, Preformatted,
-    Flowable,
+    Flowable, Image,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,10 +124,10 @@ class Diagram(Flowable):
             box(144, 138, 210, 34, ['makeBackend: select backend'])
             for top, bottom in [(346,328),(294,276),(242,224),(190,172)]:
                 arrow([(249,top),(249,bottom)])
-            for x, lines in [(0,['A + LAZY','Lazy segment tree']),
-                             (174,['A + STRETCH','Four-value segment tree']),
-                             (348,['B + LAZY','Block decomposition'])]:
-                box(x, 63, 150, 48, lines)
+            for x, lines, fill in [(0,['A + LAZY','implemented'],colors.HexColor('#e6f4ed')),
+                                   (174,['A + STRETCH','implemented'],colors.HexColor('#e6f4ed')),
+                                   (348,['B + LAZY','implemented'],colors.HexColor('#e6f4ed'))]:
+                box(x, 63, 150, 48, lines, fill)
                 arrow([(249,138),(249,125),(x+75,125),(x+75,111)])
                 arrow([(x+75,63),(x+75,48),(249,48),(249,37)])
             box(129, 3, 240, 34, ['RangeAnalytics: query results to stdout'])
@@ -152,7 +152,7 @@ class Diagram(Flowable):
 
 
 page(1, 'Range Analytics\non Sensor Streams',
-     'CS 203D - Project 3 | Team IDK | Application guide for Abhishek Verma | 11 November 2026')
+     'CS 203D - Project 3 | Team IDK | Application guide for Abhishek Verma | 20 November 2026')
 p('A guide to the whole project and the application code built for your role. '
   'Use it to understand the repository, coordinate integration, and prepare your own explanation.')
 heading('The problem in one paragraph')
@@ -163,16 +163,16 @@ p('An array holds up to one million sensor readings. Operators correct individua
 heading('What is complete today?')
 table([['Area','Status'],
        ['Your application','CLI, parser, validation, shared interface, factory, launcher, examples and application tests implemented.'],
-       ['Structure A / B','Compilable scaffolds only. Constructors deliberately throw; algorithms are pending teammate work.'],
-       ['Testing / measurements','Application checks passed. Full production differential tests, invariants and benchmarks are pending.'],
-       ['Report / presentation','Q3 draft and handoff notes exist. Complete report, measured results and slides remain pending.']], [115,384])
+       ['Structure A','LAZY and STRETCH trees connect to the app through the SegmentTree adapter; Soham’s Q1 is documented.'],
+       ['Structure B','LAZY block decomposition is implemented with unit-test source and invariant inspection.'],
+       ['Testing / measurements','Full suite passes with both structures: 54 differential configurations and 2,784,000 comparisons. Benchmark data/figures are present.']], [115,384])
 heading('How to read this guide')
 p('Pages 2-3 explain the project and architecture. Pages 4-7 explain your code '
-  'and trace commands. Page 8 explains verification. Page 9 develops Q3. Pages '
-  '10-11 contain Mermaid source, integration steps and viva preparation.')
+  'and trace commands. Page 8 explains verification and current benchmark results. '
+  'Page 9 develops Q3. Pages 10-11 contain Mermaid source, integration steps and viva preparation.')
 p('<b>Scope:</b> this is an explanatory guide, not the team\'s finished submission '
-  'report. Expected outputs describe the intended backend behavior; they are not '
-  'claimed results from the unfinished production structures.', 'SmallGuide')
+  'report. Performance values are read from the repository\'s checked-in measurement '
+  'summary and are identified as such.', 'SmallGuide')
 
 page(2, 'The whole project', 'Two modes, two structures, one operation-file format.')
 table([['Command','Meaning','LAZY A/B','STRETCH A'],
@@ -194,13 +194,12 @@ heading('Structure B: block decomposition - Smita')
 p('Split readings into blocks of about sqrt(n) elements. Each block stores its '
   'sum, minimum and pending addition. Full blocks use the summary; the two end '
   'fragments are handled element by element. This backend supports LAZY only.')
-p('<b>Expected complexity after implementation:</b> segment-tree supported operations '
-  'take O(log n); default block decomposition takes O(sqrt(n)) per operation. Both '
-  'use O(n) storage. These are theoretical targets, not measurements of the scaffolds.')
+p('<b>Complexity:</b> implemented segment-tree operations take O(log n); default '
+  'block decomposition takes O(sqrt(n)) per operation. Both use O(n) storage.')
 p('Range addition and best stretch are intentionally not combined: a constant '
   'offset changes each candidate stretch by its length times that offset.')
 
-page(3, 'Architecture and ownership', 'Figure 1. Project architecture; editable source: docs/architecture.mmd.')
+page(3, 'Architecture and ownership', 'Figure 1. Current project architecture; editable source: docs/architecture.mmd.')
 story.append(Diagram('architecture'))
 heading('Your boundary of responsibility')
 p('You own selection, parsing, validation, dispatch and output. The structure '
@@ -223,7 +222,9 @@ table([['File','What it does'],
        ['app/runner.hpp','Declares run() and BackendFactory so tests can inject a controlled backend.'],
        ['app/runner.cpp','Reads the header and initial values, validates commands, calls methods and prints answers.'],
        ['src/range_analytics.hpp','Defines Value, Index, Mode, Structure and the abstract operation contract.'],
-       ['src/backend_factory.cpp','Constructs SegmentTree for A; BlockDecomposition for B/LAZY. Rejects B/STRETCH.']], [156,343])
+       ['src/backend_factory.cpp','Constructs SegmentTree for A; BlockDecomposition for B/LAZY. Rejects B/STRETCH.'],
+       ['src/structB/block_decomposition.cpp','Implemented LAZY backend with raw readings, per-block sum/minimum/pending add, range operations and selfCheck.'],
+       ['tests/ and bench/','Oracle, differential/invariant framework, workloads, benchmark runners and plotting scripts.']], [156,343])
 heading('Why is there Python in a C++ project?')
 p('Python only builds or launches the compiled program and orchestrates tests. '
   'It does not perform production range calculations. run.py is useful on '
@@ -295,33 +296,35 @@ p('STRETCH with --structure B is rejected on line 1. S 2 1 is a reversed '
 p('Errors go to stderr and processing stops. Successful answers printed before '
   'a later error remain in stdout. Update commands print no success messages.')
 
-page(8, 'Build, run and verify', 'Commands run from the repository root. No production performance claim is made.')
-code('python build.py\npython tests/run_tests.py\npython run.py --structure A --input tests/examples/lazy.in')
-p('The first command builds the application. The second builds and runs '
-  'application-level verification. The third currently reports an unfinished '
-  'Structure A backend; once it is implemented, its expected output is '
-  '15, 1 and 20 on separate lines.')
-heading('What has been checked')
-p('Application verification passed with MinGW GCC 6.3.0 on Windows: 104 '
-  'checks in the C++ application suite, plus CLI help, invalid arguments and '
-  'B/STRETCH rejection. Coverage includes both LAZY routes, STRETCH, assignment '
-  'after additions, all-negative stretches, 64-bit readings, boundary indices, '
-  'CRLF, missing final newline, malformed input and n = 1,000,000 parsing.')
-p('The check count includes assertions about factory arguments and diagnostics; '
-  'it is not a count of independent randomized workloads. The million-reading '
-  'test verifies application handling with the test double, not segment-tree '
-  'or block-decomposition scalability.')
-heading('What remains to be verified')
-p('After backends are implemented, the Test owner must run the real structures '
-  'against an independent array/Kadane oracle for at least 100,000 fixed-seed '
-  'operations as specified, and add invariant checks. The Measurement owner '
-  'must time n from 10^4 to 10^6, compare short and long ranges, sweep block '
-  'sizes, measure memory and average at least five runs per configuration.')
-table([['C++ exit code','Meaning'],['0','Successful input replay or --help.'],
-       ['1','Invalid input, backend failure or caught runtime error.'],
-       ['2','Invalid command-line arguments.']], [120,379])
-p('The benchmark entry point deliberately exits with a pending-work message. '
-  'No raw timing CSV or finished figures have been collected.')
+page(8, 'Build, run and verify', 'Commands run from the repository root. Both structures are integrated and the suite passes.')
+code('python build.py\npython tests/run_tests.py\npython bench/benchmark.py --quick\npython bench/benchmark.py')
+p('Structure A now has LAZY and STRETCH implementations behind a SegmentTree '
+  'adapter to the app interface. Structure B supplies LAZY block decomposition. '
+  'The full build and test suite completed successfully in this review. The sample '
+  'LAZY operation file returns 15, 1 and 20.')
+heading('Testing and measurement code now present')
+p('The Test owner has added a plain-array/Kadane oracle, seven workload profiles, '
+  'a differential runner with base seed 203003, invariant checks every 500 '
+  'operations, and worst-case input generation/modeling. The documented full '
+  'suite uses 100,000 operations per configuration. All 54 configurations passed '
+  'here: 2,784,000 backend-operation comparisons and 5,568 invariant checks.')
+p('The benchmark script uses C++ runners for A lazy, A stretch and B lazy. '
+  'Recorded settings are n = 10k, 30k, 100k, 300k and 1m; 200,000 operations; '
+  'five repetitions; seeds 42 and 97; short/long/mixed profiles; and six block '
+  'sizes. The summary reports 10 trials per row, from five repetitions over two seeds.')
+heading('A sample measured comparison')
+figure_path = ROOT / 'results' / 'measurement' / 'figures' / 'lazy_vs_n_mixed.png'
+if figure_path.exists():
+    story.append(Image(str(figure_path), width=360, height=225))
+    p('Figure 3. Mixed LAZY workload, mean nanoseconds per operation. The checked-in '
+      'summary at n=1,000,000 reports about 918 ns/op for A and 2,846 ns/op for B. '
+      'At n=10,000 it reports about 369 and 477 ns/op. These are recorded results '
+      'from the repository summary, not a fresh run in this review. Machine: Windows '
+      '11, MinGW GCC 6.3.0. Interpret them with the raw CSV and benchmark method.', 'SmallGuide')
+else:
+    p('The benchmark figure lazy_vs_n_mixed.png was not found; regenerate figures from the raw CSV.', 'SmallGuide')
+p('Reading the figure: A is faster; B uses less storage. This agrees with the '
+  'expected complexity trend. Values are checked-in summaries, not a fresh run.', 'SmallGuide')
 
 page(9, 'Your Q3 explanation', 'Why does a segment-tree range query visit O(log n) nodes?')
 p('A balanced tree has height ceil(log2(n)), but that alone does not prove a '
@@ -378,16 +381,16 @@ table([['Viva prompt','Your explanation'],
        ['Why inject a factory?','It makes application control flow testable before real structures exist.'],
        ['Why stderr?','Diagnostics must not contaminate examiner query output.'],
        ['Why not zero for negative stretches?','The problem requires a nonempty contiguous stretch.'],
-       ['What did Codex do?','Generated the declared application/scaffolds and guide; you must understand and review the code.']], [155,344])
+       ['What did Codex do?','Generated the app adapter and Q1 draft; review and understand them before submission.']], [155,344])
 heading('Sources and reproducibility')
 p('This guide is based on CS203-D_Mini_Projects_4-1.pdf (Project 3 on pages 6-7; '
   'common requirements on pages 1-4 and 9-10), README.md, REPORT.md, TOOLS.md, '
   'app/, src/, build.py, run.py and tests/. It describes the repository state '
-  'reviewed on 11 November 2026.', 'SmallGuide')
+  'reviewed on 20 November 2026.', 'SmallGuide')
 p('Regenerate with: python docs/generate_project_guide.py (requires reportlab). '
   'This is a documentation dependency only. Editable diagram sources are '
   'docs/architecture.mmd and docs/command_flow.mmd. Codex assistance is declared '
-  'in TOOLS.md; this explanation does not claim the unfinished team project is complete.', 'SmallGuide')
+  'in TOOLS.md; review and understand the assisted code before submission.', 'SmallGuide')
 
 
 def footer(canvas, doc):

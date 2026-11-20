@@ -24,11 +24,16 @@ static void run(unsigned seed, Index n, Index blockSize, int ops, Value lo, Valu
         case 0: { Value v = val(); bd.pointSet(l, v); ref[l - 1] = v; break; }
         case 1: { Value d = val(); bd.rangeAdd(l, r, d); for (Index i = l; i <= r; ++i) ref[i - 1] += d; break; }
         case 2: { Value s = 0; for (Index i = l; i <= r; ++i) s += ref[i - 1];
-                  CHECK(bd.rangeSum(l, r) == s, "SUM seed=%u n=%zu B=%zu op=%d [%zu,%zu]", seed, n, blockSize, t, l, r); break; }
+                  CHECK(bd.rangeSum(l, r) == s, "SUM seed=%u n=%u B=%u op=%d [%u,%u]", seed,
+                        static_cast<unsigned>(n), static_cast<unsigned>(blockSize), t,
+                        static_cast<unsigned>(l), static_cast<unsigned>(r)); break; }
         case 3: { Value m = *std::min_element(ref.begin() + (l - 1), ref.begin() + r);
-                  CHECK(bd.rangeMin(l, r) == m, "MIN seed=%u n=%zu B=%zu op=%d [%zu,%zu]", seed, n, blockSize, t, l, r); break; }
+                  CHECK(bd.rangeMin(l, r) == m, "MIN seed=%u n=%u B=%u op=%d [%u,%u]", seed,
+                        static_cast<unsigned>(n), static_cast<unsigned>(blockSize), t,
+                        static_cast<unsigned>(l), static_cast<unsigned>(r)); break; }
         }
-        CHECK(bd.checkInvariants(), "INVARIANT seed=%u n=%zu op=%d", seed, n, t);
+        CHECK(bd.checkInvariants(), "INVARIANT seed=%u n=%u op=%d", seed,
+              static_cast<unsigned>(n), t);
     }
 }
 
