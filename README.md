@@ -15,11 +15,11 @@
 
 ## Current status
 
-The application CLI and both structures are implemented. Structure A provides
-LAZY and STRETCH segment trees through the shared interface; Structure B provides
-LAZY block decomposition. Application, unit and differential testing, worst-case
-tools and benchmark code/results are present. Full test and end-to-end status
-should be refreshed after Structure A integration.
+The application CLI, shared interface, Structure A (LAZY and STRETCH segment tree)
+and Structure B (LAZY block decomposition) are implemented and run end to end.
+Structure A and B give identical output on the LAZY example, and Structure A runs
+the STRETCH example. The oracle and differential tests pass (python tests/run_tests.py).
+Benchmarks, figures, report export and slides are still pending.
 
 ## Requirements
 
@@ -41,7 +41,7 @@ python bench/benchmark.py
 
 The LAZY examples work with either structure; STRETCH examples require Structure A.
 
-After the structures are implemented, equivalent direct examiner commands are:
+Equivalent direct examiner commands are:
 
 ```text
 # Windows Command Prompt
@@ -91,7 +91,7 @@ U 1 -5
 S 1 3
 ```
 
-Expected output once either LAZY backend is implemented:
+Expected output:
 
 ```text
 15
@@ -137,6 +137,5 @@ Tests inject a backend through `BackendFactory`; production uses `makeBackend`.
 
 ## Known limitations
 
-- Structure A and B now have implementations; rerun full verification before treating results as final.
-- Full report completion, PDF export, and presentation slides remain pending.
+- Structure A has no overflow handling: values, sums and results must fit in signed 64-bit.
 - The application is a CLI; no React dashboard is included.
