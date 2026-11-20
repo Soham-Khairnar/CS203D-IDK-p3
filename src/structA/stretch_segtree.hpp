@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <string>
 
 class StretchSegTree {
 public:
@@ -32,6 +33,11 @@ public:
 
     int size() const { return n; }
 
+    std::string selfCheck() const {
+        if (n > 0) return check(1, 1, n);
+        return std::string();
+    }
+
     static Node combine(const Node& a, const Node& b) {
         Node c;
         c.total = a.total + b.total;
@@ -44,6 +50,23 @@ public:
 private:
     int n;
     std::vector<Node> t;
+
+    std::string check(int node, int l, int r) const {
+        if (l == r) {
+            const Node& x = t[node];
+            if (x.total != x.pref || x.total != x.suf || x.total != x.best)
+                return "stretch tree: bad leaf at node " + std::to_string(node);
+            return std::string();
+        }
+        int m = (l + r) / 2;
+        Node c = combine(t[2 * node], t[2 * node + 1]);
+        const Node& x = t[node];
+        if (x.total != c.total || x.pref != c.pref || x.suf != c.suf || x.best != c.best)
+            return "stretch tree: merge mismatch at node " + std::to_string(node);
+        std::string e = check(2 * node, l, m);
+        if (!e.empty()) return e;
+        return check(2 * node + 1, m + 1, r);
+    }
 
     static Node leaf(ll v) { return Node{v, v, v, v}; }
 
