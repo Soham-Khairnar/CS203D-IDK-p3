@@ -2,13 +2,12 @@
 
 ## 1. Team and contributions
 
-See the roles table in [README.md](README.md). Add links to each member's main
-commits after they exist.
+See the roles table in [README.md](README.md).
 
 - Abhishek Verma: shared interface, factory, CLI, input validation and dispatch,
   output/error handling, build/run scripts, application tests, examples and Q3.
   Integration with completed production backends is pending.
-- Khairnar Soham Nilesh: implemented the LAZY and STRETCH segment trees, Structure A unit tests, and Q1. The application adapter connects both modes to the shared interface.
+- Soham: Structure A. The LAZY segment tree with lazy propagation (`src/structA/lazy_segtree.hpp`), the STRETCH segment tree with four values per node (`src/structA/stretch_segtree.hpp`), the `SegmentTree` adapter to the shared interface and `selfCheck()` invariant hook (`src/structA/segment_tree.*`), the Structure A unit test, and Q1.
 - Smita Singh: Structure B LAZY block decomposition, unit tests and Q2.
 - Test owner: Shrawan Kumar Prajapati (250008033, shrawanprajapati) - plain-array oracle with Kadane, seeded workload generator, differential test, invariant checker, worst-case input generator and cost model (`tests/`), Q4.
 - Measurement owner: TODO - name, benchmarks, data, figures and Q5.
@@ -30,32 +29,36 @@ Errors go to stderr with a nonzero exit code. Backends return results without pr
 
 ## 3. Structure A: Segment tree
 
-Structure A uses two modes over an array-backed binary segment tree. Both trees
-store up to `4n + 4` slots and recursively split each interval at its midpoint,
-so build time and memory are O(n), and tree height is O(log n).
+Structure A is a segment tree over the n readings. It has two modes, one tree class each, both wrapped by the `SegmentTree` adapter that implements the shared `RangeAnalytics` interface. Indices are 1-based and inclusive.
 
-In LAZY mode, `LazySegTree` stores a sum, minimum and pending addition in each
-node. A whole-node addition changes sum by `delta * segment_length`, minimum by
-`delta`, and accumulates `delta` in the node's lazy tag. Before descending, the
-tag is applied to both children with their own segment lengths and then cleared.
-Partial updates recompute the parent from its children. Range sum/minimum queries
-return a stored summary for fully covered nodes and recurse only along the query
-boundaries. Point assignment descends to the leaf after pushing tags, writes the
-absolute value directly, and recomputes ancestors. This avoids computing a
-potentially overflowing difference between the new and old values.
+**Storage.** The tree is stored in arrays indexed by node number: node `k` has children `2k` and `2k+1`, and the root (node 1) covers `[1, n]`. Each array has 4n + 4 entries, which is enough for any n, so storage is O(n). Values are 64-bit integers.
 
-In STRETCH mode, `StretchSegTree` stores `(total, prefix, suffix, best)` for each
-interval. Prefix, suffix and best all mean nonempty contiguous stretches. A point
-assignment replaces one leaf and recomputes the path upward. A range query keeps
-left-to-right order when combining partial results. Structure A exposes both
-implementations through `SegmentTree`, the adapter to the shared `RangeAnalytics`
-interface. The adapter rejects operations that are invalid for the selected mode.
+- LAZY mode keeps three arrays: `sum`, `mn` (minimum) and `lz` (a pending add). `sum` and `mn` already include the node's own pending add. `lz` is the add that the node's two children have not received yet.
+- STRETCH mode keeps one array of nodes with four values each: `total`, `pref` (best non-empty prefix), `suf` (best non-empty suffix) and `best` (best non-empty stretch).
 
-Both modes support point assignment and range sum in O(log n); LAZY additionally
-supports range add and minimum in O(log n), while STRETCH supports best stretch in
-O(log n). Structure A does not support range add in STRETCH mode because the
-four-value summary cannot be updated by a uniform offset independently of stretch
-length. Unit coverage is in `src/structA/tests/test_structA.cpp`.
+**LAZY operations.** Applying an add `x` to a node of length `len` does `sum += x * len`, `mn += x`, `lz += x`. A range add visits the node if it lies fully inside the range and applies the add there. If the node only partly overlaps the range, the add is first passed to the children (`push`), the recursion continues, and the node is recomputed from its children (`pull`). Sum and minimum queries use the same descent and push before going down. Point assignment `a[i] = v` is done as a range add of `v - a[i]` on position `i`, where `a[i]` is read with a range sum.
+
+**STRETCH operations.** A leaf stores its reading in all four values. Each parent is `combine(left, right)` (see Q1). Point assignment replaces a leaf and recomputes its ancestors. A range query combines the covered nodes from left to right. Best-stretch queries return the best non-empty stretch, so an all-negative range returns its largest value.
+
+Example for the array `[3, -4, 5, -2]`; each node shows (total, pref, suf, best):
+
+```mermaid
+flowchart TD
+    R["[1,4]: (2, 4, 3, 5)"] --> L["[1,2]: (-1, 3, -1, 3)"]
+    R --> M["[3,4]: (3, 5, 3, 5)"]
+    L --> A["[1]: (3, 3, 3, 3)"]
+    L --> B["[2]: (-4, -4, -4, -4)"]
+    M --> C["[3]: (5, 5, 5, 5)"]
+    M --> D["[4]: (-2, -2, -2, -2)"]
+```
+
+**Complexity.** Build takes O(n). Every point update, range add, range sum, range minimum and best-stretch query takes O(log n), because a query visits at most four nodes per level (Q3) and the tree has height ceil(log2 n). Recursion depth is O(log n), so deep recursion is not an issue even at n = 10^6.
+
+**Design decision.** Point assignment in LAZY mode is written as a range add of the difference between the new and the current value, instead of its own special descent. It reuses the existing push, apply and pull code, so a pending add on an ancestor can never leak into the new value, and there is only one update path to test. The cost is one extra O(log n) query to read the current value. We also kept LAZY and STRETCH as two separate classes. LAZY nodes need a pending add and no prefix/suffix values, and STRETCH nodes need four values and no pending add (range add is not allowed in that mode), so merging them would add memory and complexity to each.
+
+**What A can do that B cannot.** Structure A supports STRETCH mode. Block decomposition has no way to summarise prefix and suffix information per block in a form that combines in O(1), so Structure B supports LAZY mode only. A also gives O(log n) operations instead of O(sqrt(n)).
+
+**Interface and checking.** The adapter validates ranges, throws `std::logic_error` for unsupported operations (range add and range minimum in STRETCH mode, best stretch in LAZY mode), and implements `selfCheck()`. In LAZY mode this checks that every internal node's `sum` and `mn` equal its children's values plus its own pending add. In STRETCH mode it checks that every internal node equals `combine` of its children and every leaf has four equal values.
 
 ## 4. Structure B: Block decomposition
 
@@ -107,33 +110,35 @@ TODO (team): choose a structure using measured results and discuss STRETCH suppo
 
 ### Q1 (author: Khairnar Soham Nilesh)
 
-For a nonempty interval, store four values: total sum `T`, best nonempty prefix
-sum `P`, best nonempty suffix sum `S`, and best nonempty contiguous stretch sum
-`B`. Split an interval into adjacent left and right parts with summaries
-`L = (T_L, P_L, S_L, B_L)` and `R = (T_R, P_R, S_R, B_R)`. Every prefix of their
-concatenation either ends inside the left part, or contains all of the left part
-followed by a prefix of the right. The suffix argument is symmetric. A best
-stretch either lies entirely on one side or crosses the boundary using a suffix
-of the left and a prefix of the right. Therefore:
+For a segment, the four values are: `total` (sum of all readings), `pref` (largest sum of a non-empty prefix), `suf` (largest sum of a non-empty suffix) and `best` (largest sum of any non-empty contiguous stretch). A leaf with reading `v` has all four equal to `v`.
+
+Let `a` be the left child's values and `b` the right child's. Every stretch of the combined segment lies entirely in the left half, entirely in the right half, or crosses the middle. This gives the parent's four values:
 
 ```text
-T = T_L + T_R
-P = max(P_L, T_L + P_R)
-S = max(S_R, T_R + S_L)
-B = max(B_L, B_R, S_L + P_R)
+total = a.total + b.total
+pref  = max(a.pref, a.total + b.pref)
+suf   = max(b.suf,  b.total + a.suf)
+best  = max(a.best, b.best, a.suf + b.pref)
 ```
 
-For example, concatenate `[2, -1]` and `[3, -4]`. The left summary is
-`(1, 2, 1, 2)` and the right summary is `(-1, 3, -1, 3)`. The combined summary
-is `(0, 4, 0, 4)`: the best prefix is `[2, -1, 3]` with sum 4, the best
-suffix is the whole interval with sum 0, and the best stretch is `[2, -1, 3]`.
-Associativity follows because each summary describes the same four properties
-of the represented concatenated sequence: grouping `(A merge B) merge C` or
-`A merge (B merge C)` must produce the unique summary for `A || B || C`. For
-`[2, -1] || [3] || [-4]`, either grouping gives `(0, 4, 0, 4)`. The merge applies
-to nonempty, ordered adjacent intervals. For partial queries, the implementation
-skips an absent side instead of treating it as an ordinary zero summary; that
-preserves correctness when every reading is negative.
+- **total:** the sum of the whole segment is the sum of its two halves.
+- **pref:** a non-empty prefix of the combined segment either ends inside the left half (best value `a.pref`) or covers the whole left half and continues into a non-empty prefix of the right half (best value `a.total + b.pref`). The larger of the two is the answer.
+- **suf:** by symmetry, a suffix either lies inside the right half (`b.suf`) or covers the whole right half and extends into a suffix of the left half (`b.total + a.suf`).
+- **best:** a stretch lies inside the left half (`a.best`), inside the right half (`b.best`), or crosses the middle. A crossing stretch is a non-empty suffix of the left half joined to a non-empty prefix of the right half, whose best value is `a.suf + b.pref`.
+
+**Associativity.** Write `X · Y` for the combine of `X` on the left and `Y` on the right. The derivation shows that `X · Y` equals the true four values of the concatenated segment. A concatenation of three segments is the same array whichever two are joined first, so `(X · Y) · Z` and `X · (Y · Z)` both give the true values of the whole concatenation, and they are equal. This matters because a range query combines O(log n) nodes whose grouping depends on the tree shape, and the answer must not depend on that grouping. Combine is not commutative, which is why the nodes are always combined from left to right.
+
+**Example.** Let X = [3, -4], Y = [5], Z = [-2, 6]. Their values (total, pref, suf, best) are X = (-1, 3, -1, 3), Y = (5, 5, 5, 5) and Z = (4, 4, 6, 6).
+
+Left grouping:
+- X · Y = (4, max(3, -1+5) = 4, max(5, 5+(-1)) = 5, max(3, 5, -1+5) = 5) = (4, 4, 5, 5)
+- (X · Y) · Z = (8, max(4, 4+4) = 8, max(6, 4+5) = 9, max(5, 6, 5+4) = 9) = (8, 8, 9, 9)
+
+Right grouping:
+- Y · Z = (9, max(5, 5+4) = 9, max(6, 4+5) = 9, max(5, 6, 5+4) = 9) = (9, 9, 9, 9)
+- X · (Y · Z) = (8, max(3, -1+9) = 8, max(9, 9+(-1)) = 9, max(3, 9, -1+9) = 9) = (8, 8, 9, 9)
+
+Both groupings give (8, 8, 9, 9). Direct check on [3, -4, 5, -2, 6]: total = 8, best prefix = 8 (the whole array), best suffix = 9 (5 - 2 + 6), best stretch = 9 (the same stretch).
 
 ### Q2 (author: Smita Singh)
 

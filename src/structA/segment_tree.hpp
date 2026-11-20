@@ -1,19 +1,18 @@
 #pragma once
-
-#include "../inspectable.hpp"
 #include "../range_analytics.hpp"
+#include "../inspectable.hpp"
 #include "lazy_segtree.hpp"
 #include "stretch_segtree.hpp"
-#include <memory>
-#include <vector>
+#include <string>
 
 namespace sensor {
 
-// Adapter from Soham's standalone tree implementations to the application API.
-// Public indices stay 1-based and ranges inclusive.
-class SegmentTree final : public RangeAnalytics {
+class SegmentTree final : public RangeAnalytics, public Inspectable {
 public:
     SegmentTree(Mode mode, const std::vector<Value>& initial);
+    ~SegmentTree() override;
+    SegmentTree(const SegmentTree&) = delete;
+    SegmentTree& operator=(const SegmentTree&) = delete;
 
     void pointSet(Index i, Value value) override;
     void rangeAdd(Index left, Index right, Value delta) override;
@@ -21,11 +20,15 @@ public:
     Value rangeMin(Index left, Index right) override;
     Value bestStretch(Index left, Index right) override;
 
+    std::string selfCheck() const override;
+
 private:
     Mode mode_;
-    std::unique_ptr<LazySegTree> lazy_;
-    std::unique_ptr<StretchSegTree> stretch_;
-    static int checkedIndex(Index index);
+    Index n_;
+    LazySegTree* lazy_;
+    StretchSegTree* stretch_;
+
+    void checkRange(Index left, Index right) const;
 };
 
-} // namespace sensor
+}

@@ -1,61 +1,58 @@
 #include "segment_tree.hpp"
-#include <limits>
 #include <stdexcept>
 
 namespace sensor {
-namespace {
-std::vector<long long> toLongLong(const std::vector<Value>& values) {
-    std::vector<long long> converted;
-    converted.reserve(values.size());
-    for (Value value : values) {
-        if (value < static_cast<Value>(std::numeric_limits<long long>::min()) ||
-            value > static_cast<Value>(std::numeric_limits<long long>::max())) {
-            throw std::out_of_range("reading does not fit the segment tree value type");
-        }
-        converted.push_back(static_cast<long long>(value));
-    }
-    return converted;
-}
-}
 
 SegmentTree::SegmentTree(Mode mode, const std::vector<Value>& initial)
-    : mode_(mode) {
-    if (initial.empty()) throw std::invalid_argument("SegmentTree: need at least one reading");
-    const auto values = toLongLong(initial);
-    if (mode_ == Mode::Lazy) lazy_.reset(new LazySegTree(values));
-    else stretch_.reset(new StretchSegTree(values));
+    : mode_(mode), n_(initial.size()), lazy_(nullptr), stretch_(nullptr) {
+    if (n_ == 0) throw std::invalid_argument("SegmentTree: need at least one reading");
+    std::vector<long long> a(initial.begin(), initial.end());
+    if (mode_ == Mode::Lazy) lazy_ = new LazySegTree(a);
+    else stretch_ = new StretchSegTree(a);
 }
 
-int SegmentTree::checkedIndex(Index index) {
-    if (index < 1 || index > static_cast<Index>(std::numeric_limits<int>::max()))
-        throw std::out_of_range("SegmentTree: index out of range");
-    return static_cast<int>(index);
+SegmentTree::~SegmentTree() {
+    delete lazy_;
+    delete stretch_;
+}
+
+void SegmentTree::checkRange(Index l, Index r) const {
+    if (l < 1 || r > n_ || l > r) throw std::out_of_range("SegmentTree: bad range");
 }
 
 void SegmentTree::pointSet(Index i, Value value) {
-    const int index = checkedIndex(i);
-    if (mode_ == Mode::Lazy) lazy_->point_set(index, static_cast<long long>(value));
-    else stretch_->point_set(index, static_cast<long long>(value));
+    checkRange(i, i);
+    if (lazy_) lazy_->point_set((int)i, value);
+    else stretch_->point_set((int)i, value);
 }
 
-void SegmentTree::rangeAdd(Index left, Index right, Value delta) {
-    if (mode_ != Mode::Lazy) throw std::logic_error("rangeAdd is only available in LAZY mode");
-    lazy_->range_add(checkedIndex(left), checkedIndex(right), static_cast<long long>(delta));
+void SegmentTree::rangeAdd(Index l, Index r, Value delta) {
+    checkRange(l, r);
+    if (!lazy_) throw std::logic_error("Structure A STRETCH mode does not support range add");
+    lazy_->range_add((int)l, (int)r, delta);
 }
 
-Value SegmentTree::rangeSum(Index left, Index right) {
-    const int l = checkedIndex(left), r = checkedIndex(right);
-    return mode_ == Mode::Lazy ? lazy_->range_sum(l, r) : stretch_->range_sum(l, r);
+Value SegmentTree::rangeSum(Index l, Index r) {
+    checkRange(l, r);
+    if (lazy_) return lazy_->range_sum((int)l, (int)r);
+    return stretch_->range_sum((int)l, (int)r);
 }
 
-Value SegmentTree::rangeMin(Index left, Index right) {
-    if (mode_ != Mode::Lazy) throw std::logic_error("rangeMin is only available in LAZY mode");
-    return lazy_->range_min(checkedIndex(left), checkedIndex(right));
+Value SegmentTree::rangeMin(Index l, Index r) {
+    checkRange(l, r);
+    if (!lazy_) throw std::logic_error("Structure A STRETCH mode does not support range minimum");
+    return lazy_->range_min((int)l, (int)r);
 }
 
-Value SegmentTree::bestStretch(Index left, Index right) {
-    if (mode_ != Mode::Stretch) throw std::logic_error("bestStretch is only available in STRETCH mode");
-    return stretch_->best_stretch(checkedIndex(left), checkedIndex(right));
+Value SegmentTree::bestStretch(Index l, Index r) {
+    checkRange(l, r);
+    if (!stretch_) throw std::logic_error("Structure A LAZY mode does not support best stretch");
+    return stretch_->best_stretch((int)l, (int)r);
 }
 
-} // namespace sensor
+std::string SegmentTree::selfCheck() const {
+    if (lazy_) return lazy_->selfCheck();
+    return stretch_->selfCheck();
+}
+
+}
