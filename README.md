@@ -139,6 +139,7 @@ Tests inject a backend through `BackendFactory`; production uses `makeBackend`.
 
 ## Known limitations
 
+- Structure A has no overflow handling: values, sums and results must fit in signed 64-bit.
 - Timings can vary by machine; checked-in figures describe the recorded environment in `results/measurement/environment.json`.
 - Full report completion, PDF export, and presentation slides remain pending.
 - The application is a CLI; no React dashboard is included.
