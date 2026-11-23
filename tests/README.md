@@ -14,7 +14,7 @@
 ## Run (from the repository root)
 
     python tests/run_tests.py                 # application tests + full differential suite
-    python tests/run_tests.py --only A        # one structure while the other is unfinished
+    python tests/run_tests.py --only A        # run the differential suite for A only
     python tests/run_tests.py --quick         # smoke test
     python tests/run_tests.py --ops 100000 --seed 203003
 
@@ -30,8 +30,13 @@ seed, config, operation number, expected and actual values, and writes a replaya
 
 Files go to `build/workloads/` with a `manifest.csv` listing file, kind, n, ops, seed and model cost.
 
-## Limitation
+## Current verification
 
-Differential and invariant tests only pass once Structure A and B are implemented.
-White-box checks need the backend to inherit `sensor::Inspectable`; otherwise only
-black-box checks run.
+Both production structures are implemented. The full suite was run on 23 November
+2026: 54 configurations passed, comparing 2,784,000 backend operations with the
+oracle and performing 5,568 invariant checks. The test runner exercises the CLI,
+Structure B unit tests and the differential suite. Structure A also has a separate
+standalone unit test at `src/structA/tests/test_structA.cpp`.
+
+White-box checks require a backend to inherit `sensor::Inspectable`; both current
+production backends provide that hook. Other backends still receive black-box checks.

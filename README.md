@@ -15,16 +15,18 @@
 
 ## Current status
 
-The application CLI and both structures are implemented. Structure A provides
-LAZY and STRETCH segment trees through the shared interface; Structure B provides
-LAZY block decomposition. Application, unit and differential testing, worst-case
-tools and benchmark code/results are present. Full test and end-to-end status
-should be refreshed after Structure A integration.
+The application CLI, both structures, application/unit/differential tests,
+worst-case tools, and benchmark code are implemented. On 23 November 2026, the
+full test suite passed 54 configurations (2,784,000 backend-operation comparisons
+and 5,568 invariant checks). The documented examples also passed on their
+supported structures. See `tests/README.md` and `bench/README.md` for scope.
 
 ## Requirements
 
 - C++17; verified locally with MinGW GCC 6.3.0 on Windows.
-- Python 3 for build, launcher, and test scripts; standard library only.
+- Python 3 for build, launcher, and test scripts (standard library only); the
+  benchmark additionally requires matplotlib. Regenerating the guide PDF requires
+  ReportLab (`python docs/generate_project_guide.py`).
 - `g++` on PATH, or set `CXX` to a compiler executable path compatible with GCC flags.
 - Scripts handle Windows and Unix executable names; Linux/macOS are not yet verified.
 
@@ -41,7 +43,7 @@ python bench/benchmark.py
 
 The LAZY examples work with either structure; STRETCH examples require Structure A.
 
-After the structures are implemented, equivalent direct examiner commands are:
+Equivalent direct examiner commands are:
 
 ```text
 # Windows Command Prompt
@@ -91,7 +93,7 @@ U 1 -5
 S 1 3
 ```
 
-Expected output once either LAZY backend is implemented:
+Expected output on either LAZY backend:
 
 ```text
 15
@@ -128,15 +130,15 @@ Tests inject a backend through `BackendFactory`; production uses `makeBackend`.
 
 | Location | Owner / next work |
 |---|---|
-| `app/`, interface, factory, build/launcher scripts | Abhishek: implemented; integrate completed backends |
+| `app/`, interface, factory, build/launcher scripts | Abhishek: CLI and shared application contract |
 | `src/structA/` | Soham: LAZY/STRETCH segment trees, shared-interface adapter, unit tests and Q1 |
-| `src/structB/` | Smita Singh: completed LAZY block decomposition, unit tests and Q2; see local README |
-| `tests/` | Test owner: full oracle, differential tests, invariants, worst-case inputs |
-| `bench/`, `results/` | Measurement owner: timings, memory, CSV and figures |
+| `src/structB/` | Smita Singh: LAZY block decomposition, unit tests and Q2; see local README |
+| `tests/` | Shrawan: oracle, differential tests, invariants and worst-case inputs |
+| `bench/`, `results/` | Sarthak: benchmark runners, measurement data, memory estimates and figures |
 | `REPORT.md` | Each member: complete assigned sections and analysis answer |
 
 ## Known limitations
 
-- Structure A and B now have implementations; rerun full verification before treating results as final.
+- Timings can vary by machine; checked-in figures describe the recorded environment in `results/measurement/environment.json`.
 - Full report completion, PDF export, and presentation slides remain pending.
 - The application is a CLI; no React dashboard is included.
